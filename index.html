@@ -3,182 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Árbol Pixel</title>
+<title>Limpia el Árbol</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-body{
-  background:#a8d8ea;
-  font-family:'Press Start 2P', monospace;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:100vh; margin:0; image-rendering:pixelated;
-}
-h1{font-size:14px; color:#2d4a22; margin-bottom:10px; text-shadow:2px 2px 0 #fff;}
-#game{
-  background:#e8f5c8;
-  border:6px solid #2d4a22;
-  box-shadow:8px 8px 0 #2d4a22;
-  width:360px; padding:16px;
-  display:flex; flex-direction:column; align-items:center;
-}
-#canvasWrap{
-  width:320px; height:320px;
-  background:#87ceeb;
-  border:4px solid #2d4a22;
-  position:relative; overflow:hidden;
-}
-#tree{ position:absolute; left:50%; bottom:20px; transform:translateX(-50%); width:160px; height:220px; }
-.pixel{ position:absolute; width:10px; height:10px; }
-.trunk{ background:#8b4513; }
-.trunk-dark{ background:#5a2d0c; }
-.leaf{ background:#2d9a2d; }
-.leaf-light{ background:#4ec44e; }
-.leaf-dark{ background:#1a5c1a; }
-.leaf-dead{ background:#8b5a2b; }
-.flower{ background:#ff6b9d; box-shadow:inset -2px -2px 0 #c93a6b, inset 2px 2px 0 #ffb3cc; }
-.flower-y{ background:#ffeb3b; box-shadow:inset -2px -2px 0 #c9a800, inset 2px 2px 0 #fff59d; }
-.flower-w{ background:#fff; box-shadow:inset -2px -2px 0 #aaa, inset 2px 2px 0 #fff; }
-#stats{ margin-top:12px; font-size:8px; color:#2d4a22; width:100%; display:flex; justify-content:space-between; }
-#message{ font-size:8px; height:20px; margin-top:8px; color:#2d4a22; text-align:center; }
-.controls{ display:flex; gap:12px; margin-top:14px; width:100%; }
-button{
-  flex:1; font-family:'Press Start 2P', monospace; font-size:8px;
-  padding:12px 6px; border:4px solid #2d4a22; cursor:pointer;
-  box-shadow:4px 4px 0 #2d4a22;
-}
-button:active{ transform:translate(4px,4px); box-shadow:0 0 0 #2d4a22; }
-#plantBtn{ background:#7ed957; color:#1a3a0a; }
-#trashBtn{ background:#ff5757; color:#fff; }
-button:disabled{ opacity:0.5; filter:grayscale(1); }
-.plant-icon{ position:absolute; bottom:0; width:32px; height:40px; }
-.ground{ position:absolute; bottom:0; width:100%; height:28px; background:#6bbf59; border-top:4px solid #2d4a22; }
-.ground-dead{ background:#9e8a6a!important; }
+  body { margin:0; background:#a2d2ff; font-family:'Press Start 2P', monospace; text-align:center; overflow:hidden; }
+  h1 { font-size:12px; margin-top:20px; }
+  #juego { position:relative; width:300px; height:400px; margin:20px auto; background:#b5e48c; border:4px solid #000; }
+  #arbol { font-size:100px; position:absolute; bottom:50px; left:50%; transform:translateX(-50%); }
+  .item { position:absolute; font-size:24px; cursor:pointer; animation: caer 3s linear infinite; }
+  @keyframes caer { from{top:-30px} to{top:380px} }
+  #barra { width:300px; height:20px; border:3px solid #000; margin:10px auto; background:white; }
+  #progreso { height:100%; width:0%; background:#2b9348; transition:0.3s; }
+  button { font-family:'Press Start 2P'; padding:15px; background:#ffbe0b; border:3px solid #000; cursor:pointer; box-shadow:4px 4px 0 #000; }
+  button:active { transform:translate(2px,2px); box-shadow:2px 2px 0 #000; }
+  #win { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); color:#fff; z-index:10; flex-direction:column; justify-content:center; align-items:center; }
+  #win h2 { font-size:32px; color:#ffff3f; text-shadow:4px 4px 0 #ff006e; line-height:1.5; animation: pop 0.5s infinite alternate; }
+  @keyframes pop { from{transform:scale(1)} to{transform:scale(1.1)} }
 </style>
 </head>
 <body>
-<h1>SALVA AL ARBOL</h1>
-<div id="game">
-  <div id="canvasWrap">
-    <div id="tree"></div>
-    <div id="plantsLayer" style="position:absolute; left:0; right:0; bottom:28px; height:20px;"></div>
-    <div class="ground" id="ground"></div>
-  </div>
-  <div id="stats">
-    <span>VIDA: <span id="healthText">100%</span></span>
-    <span>PLANTAS: <span id="plantCount">0</span>/5</span>
-  </div>
-  <div id="message">¡Cuida el árbol!</div>
-  <div class="controls">
-    <button id="plantBtn">🌱 SEMBRAR</button>
-    <button id="trashBtn">🗑️ BASURA</button>
-  </div>
-</div>
-<script>
-let health = 100;
-let plants = 0;
-const maxPlants = 5;
-const treeEl = document.getElementById('tree');
-const plantsLayer = document.getElementById('plantsLayer');
-const healthText = document.getElementById('healthText');
-const plantCount = document.getElementById('plantCount');
-const messageEl = document.getElementById('message');
-const groundEl = document.getElementById('ground');
+<h1>LIMPIA EL ÁRBOL</h1>
+<div id="barra"><div id="progreso"></div></div>
+<p style="font-size:10px"><span id="pct">0</span>% LIMPIO</p>
 
-function drawTree(){
-  treeEl.innerHTML='';
-  let leafColor = 'leaf', leafLight='leaf-light', leafDark='leaf-dark';
-  if(health<30){ leafColor='leaf-dead'; leafLight='leaf-dead'; leafDark='leaf-dead'; }
-  else if(health<60){ leafColor='leaf-dark'; }
-  for(let y=0;y<12;y++){
-    for(let x=0;x<4;x++){
-      let d=document.createElement('div');
-      d.className='pixel '+(x==0||y==11?'trunk-dark':'trunk');
-      d.style.left=(60 + x*10)+'px';
-      d.style.top=(100 + y*10)+'px';
-      treeEl.appendChild(d);
+<div id="juego">
+  <div id="arbol">🌳</div>
+</div>
+
+<button id="btnBasura">🗑️ RECOGER BASURA</button>
+
+<div id="win">
+  <h2>MUY<br>BIEN!</h2>
+  <p style="margin-top:20px; font-size:10px">¡SALVASTE AL ARBOL!</p>
+  <button onclick="location.reload()" style="margin-top:20px">JUGAR DE NUEVO</button>
+</div>
+
+<script>
+let porcentaje = 0;
+let juego = document.getElementById('juego');
+let progreso = document.getElementById('progreso');
+let pctTxt = document.getElementById('pct');
+let win = document.getElementById('win');
+
+const basuras = ['🗑️','🧴','🥤','🛍️','🧃','🍂','💨'];
+
+function crearBasura(){
+  let b = document.createElement('div');
+  b.className = 'item';
+  b.textContent = basuras[Math.floor(Math.random()*basuras.length)];
+  b.style.left = Math.random()*260 + 'px';
+  b.style.top = '-30px';
+  juego.appendChild(b);
+  setTimeout(()=>{ if(b.parentNode) b.remove() }, 3000);
+}
+
+setInterval(crearBasura, 400);
+
+document.getElementById('btnBasura').addEventListener('click', ()=>{
+  let items = document.querySelectorAll('.item');
+  if(items.length>0){
+    items.forEach(i=>{
+      i.textContent = '✨';
+      setTimeout(()=>i.remove(), 200);
+    });
+    porcentaje += 15;
+    if(porcentaje>100) porcentaje=115;
+    progreso.style.width = Math.min(porcentaje,100)+'%';
+    pctTxt.textContent = porcentaje;
+
+    if(porcentaje>=100){
+      win.style.display='flex';
     }
   }
-  let canopy = [
-    [0,0,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1],
-    [0,1,1,1,1,1,1,0],
-    [0,0,1,1,1,1,0,0],
-  ];
-  for(let y=0;y<canopy.length;y++){
-    for(let x=0;x<8;x++){
-      if(!canopy[y][x]) continue;
-      if(health<20 && Math.random()>0.6) continue;
-      let d=document.createElement('div');
-      let cls = leafColor;
-      if((x+y)%3==0) cls=leafLight;
-      if((x*y)%5==0) cls=leafDark;
-      d.className='pixel '+cls;
-      d.style.left=(40 + x*10)+'px';
-      d.style.top=(20 + y*10)+'px';
-      treeEl.appendChild(d);
-    }
-  }
-  if(health>70){
-    for(let i=0;i<plants;i++){
-      let d=document.createElement('div');
-      d.className='pixel '+(i%3==0?'flower':i%3==1?'flower-y':'flower-w');
-      d.style.left=(45 + Math.random()*60)+'px';
-      d.style.top=(25 + Math.random()*50)+'px';
-      d.style.zIndex=5;
-      treeEl.appendChild(d);
-    }
-  }
-  if(health<=0){
-    treeEl.innerHTML='';
-    for(let y=0;y<8;y++){
-      for(let x=0;x<3;x++){
-        let d=document.createElement('div');
-        d.className='pixel trunk-dark';
-        d.style.left=(65 + x*10)+'px';
-        d.style.top=(110 + y*10)+'px';
-        treeEl.appendChild(d);
-      }
-    }
-  }
-}
-function drawPlants(){
-  plantsLayer.innerHTML='';
-  for(let i=0;i<plants;i++){
-    let p=document.createElement('div');
-    p.className='plant-icon';
-    p.style.left=(10 + i*60)+'px';
-    p.innerHTML = `<div style="position:absolute; bottom:6px; left:12px; width:6px; height:${12+i*2}px; background:#2d9a2d"></div>
-    <div style="position:absolute; bottom:${16+i*2}px; left:8px; width:14px; height:10px; background:${i%3==0?'#ff6b9d':i%3==1?'#ffeb3b':'#fff'}; box-shadow:2px 2px 0 #000"></div>`;
-    plantsLayer.appendChild(p);
-  }
-}
-function updateUI(){
-  healthText.textContent = Math.max(0,health)+'%';
-  plantCount.textContent = plants;
-  document.getElementById('plantBtn').disabled = plants>=maxPlants || health<=0;
-  groundEl.className = health<40?'ground ground-dead':'ground';
-  if(health>80) messageEl.textContent='¡El árbol está feliz!';
-  else if(health>50) messageEl.textContent='El árbol está bien';
-  else if(health>20) messageEl.textContent='¡Se está muriendo!';
-  else if(health>0) messageEl.textContent='¡Ayuda urgente!';
-  else messageEl.textContent='💀 El árbol murió...';
-}
-function plant(){
-  if(plants>=maxPlants) return;
-  if(health<=0) return;
-  plants++; health = Math.min(100, health+15);
-  drawTree(); drawPlants(); updateUI();
-}
-function trash(){
-  if(health<=0) return;
-  health = Math.max(0, health-20);
-  drawTree(); updateUI();
-}
-document.getElementById('plantBtn').onclick=plant;
-document.getElementById('trashBtn').onclick=trash;
-drawTree(); updateUI();
+});
 </script>
 </body>
 </html>
