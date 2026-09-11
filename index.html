@@ -10,26 +10,29 @@
   h1{font-size:11px;margin:15px 0}
   #barra{width:300px;height:22px;border:4px solid #000;margin:0 auto;background:#fff;box-shadow:4px 4px 0 #000}
   #progreso{height:100%;width:0%;background:#00b600;transition:width 0.3s}
+  #progreso.negativo{background:#ff0000!important}
   #pct{font-size:10px;margin:8px 0;display:block}
-  #juego{position:relative;width:320px;height:380px;margin:15px auto;background:#a7e174;border:4px solid #000;box-shadow:6px 6px 0 #000;overflow:hidden}
+  #juego{position:relative;width:320px;height:380px;margin:15px auto;background:#a7e174;border:4px solid #000;box-shadow:6px 6px 0 #000;overflow:hidden;transition:0.5s}
+  #juego.feo{background:#5a3e2b!important}
   #arbol{font-size:110px;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:1;transition:0.5s}
- .flor{position:absolute;font-size:20px;z-index:2;transition:0.5s}
- .basura{position:absolute;font-size:22px;z-index:3;animation:caer 5s linear forwards}
+  .flor{position:absolute;font-size:20px;z-index:2}
+  .basura{position:absolute;font-size:22px;z-index:3;animation:caer 5s linear forwards}
   @keyframes caer{from{top:-30px}to{top:360px}}
   #botones{display:flex;justify-content:center;gap:8px;width:340px;margin:10px auto}
- .btn{font-family:'Press Start 2P';font-size:7px;padding:12px 6px;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer;flex:1;line-height:1.3}
- .btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+  .btn{font-family:'Press Start 2P';font-size:7px;padding:12px 6px;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer;flex:1}
+  .btn:disabled{background:#888!important;color:#222!important;box-shadow:none!important}
   #btnPlantar{background:#ffbe0b}
   #btnRegar{background:#00b4d8;color:#fff}
   #btnBasura{background:#3a86ff;color:#fff}
- .btn:disabled{background:#888!important;color:#444!important;box-shadow:none!important;cursor:not-allowed!important}
-  #win{display:none;position:fixed;inset:0;background:#000;z-index:99;flex-direction:column;justify-content:center;align-items:center;color:#fff}
-  #win h2{font-size:42px;color:#ffbe0b;text-shadow:6px 6px 0 #ff006e;line-height:1.2;animation:brilla 0.4s infinite alternate}
+  .pantalla{display:none;position:fixed;inset:0;z-index:99;flex-direction:column;justify-content:center;align-items:center;color:#fff}
+  #win{background:#000}
+  #lose{background:#2b0000}
+  .pantalla h2{font-size:42px;text-shadow:6px 6px 0 #000;line-height:1.2;animation:brilla 0.4s infinite alternate}
+  #win h2{color:#ffbe0b;text-shadow:6px 6px 0 #ff006e}
+  #lose h2{color:#ff0000;text-shadow:6px 6px 0 #000}
   @keyframes brilla{from{transform:scale(1)}to{transform:scale(1.2)}}
- .gota{position:absolute;color:#00b4d8;font-size:18px;animation:lluvia 0.8s linear;z-index:10}
+  .gota{position:absolute;color:#00b4d8;font-size:18px;animation:lluvia 0.8s linear;z-index:10}
   @keyframes lluvia{from{top:0;opacity:1}to{top:300px;opacity:0}}
-  #menos{position:absolute;font-size:12px;color:red;animation:subir 1s forwards;z-index:20}
-  @keyframes subir{from{top:300px;opacity:1}to{top:150px;opacity:0}}
 </style>
 </head>
 <body>
@@ -38,15 +41,24 @@
 <span id="pct">0% LIMPIO</span>
 <div id="juego"><div id="arbol">🌳</div></div>
 <div id="botones">
-  <button class="btn" id="btnPlantar">🌸<br>PLANTAR</button>
-  <button class="btn" id="btnRegar">💧<br>REGAR</button>
-  <button class="btn" id="btnBasura" disabled>🗑️<br>0</button>
+  <button class="btn" id="btnPlantar">🌸 PLANTAR</button>
+  <button class="btn" id="btnRegar">💧 REGAR</button>
+  <button class="btn" id="btnBasura" disabled>🗑️ VACIO</button>
 </div>
-<div id="win">
+
+<div id="win" class="pantalla">
   <h2>MUY<br>BIEN!</h2>
-  <p style="font-size:10px;margin-top:20px">¡ARBOl AL 100%!</p>
+  <p style="font-size:10px;margin-top:15px">¡LO SALVASTE!</p>
   <button class="btn" style="margin-top:20px;background:#fff" onclick="location.reload()">REINICIAR</button>
 </div>
+
+<div id="lose" class="pantalla">
+  <h2 style="font-size:28px">¡PERDISTE!</h2>
+  <p style="font-size:40px;margin:15px">🪾</p>
+  <p style="font-size:9px">EL ARBOL MURIO<br>POR LA BASURA</p>
+  <button class="btn" style="margin-top:20px;background:#fff" onclick="location.reload()">REINTENTAR</button>
+</div>
+
 <script>
 let juego=document.getElementById('juego');
 let arbol=document.getElementById('arbol');
@@ -56,52 +68,90 @@ let btnBasura=document.getElementById('btnBasura');
 let progreso=document.getElementById('progreso');
 let pctTxt=document.getElementById('pct');
 let win=document.getElementById('win');
+let lose=document.getElementById('lose');
 let porcentaje=0;
-let enRecarga = { plantar:false, regar:false, basura:false };
+let juegoTerminado=false;
 
-function cooldown(btn, key, textoOriginal){
-  enRecarga[key]=true;
+function actualizarArbol(){
+  if(porcentaje <= -40){
+    arbol.textContent='🪾'; // arbol seco pelon
+    juego.classList.add('feo');
+  } else if(porcentaje <= -20){
+    arbol.textContent='🌲'; // arbol triste
+    juego.classList.remove('feo');
+  } else if(porcentaje >= 50){
+    arbol.textContent='🌳';
+    juego.classList.remove('feo');
+  } else {
+    arbol.textContent='🌳';
+    juego.classList.remove('feo');
+  }
+}
+
+function actualizarUI(){
+  if(juegoTerminado) return;
+  if(porcentaje>115) porcentaje=115;
+
+  // barra
+  if(porcentaje<=0){
+    progreso.style.width='5%';
+    progreso.classList.add('negativo');
+    pctTxt.style.color='red';
+  } else {
+    progreso.style.width=Math.min(porcentaje,100)+'%';
+    progreso.classList.remove('negativo');
+    pctTxt.style.color='black';
+  }
+  
+  pctTxt.textContent=porcentaje+'% LIMPIO';
+  
+  let total=document.querySelectorAll('.basura').length;
+  if(!btnBasura.dataset.cooldown){
+    btnBasura.disabled = total===0;
+    btnBasura.textContent = total===0 ? '🗑️ VACIO' : `🗑️ ${total}`;
+  }
+
+  actualizarArbol();
+
+  if(porcentaje>=100){
+    juegoTerminado=true;
+    win.style.display='flex';
+  }
+  if(porcentaje<=-50){
+    juegoTerminado=true;
+    lose.style.display='flex';
+  }
+}
+
+function ponerEnRecarga(btn, textoFinal){
+  btn.dataset.cooldown="1";
   btn.disabled=true;
-  let tiempo=5;
-  let intervalo=setInterval(()=>{
-    btn.innerHTML=`⏳<br>${tiempo}s`;
-    tiempo--;
-    if(tiempo<0){
-      clearInterval(intervalo);
-      enRecarga[key]=false;
-      btn.innerHTML=textoOriginal;
-      actualizarUI(); // revisa si debe seguir deshabilitado por basura
+  let t=5;
+  btn.textContent=t+"s";
+  let timer=setInterval(()=>{
+    t--;
+    if(t>0){ btn.textContent=t+"s"; }
+    else {
+      clearInterval(timer);
+      delete btn.dataset.cooldown;
+      btn.textContent=textoFinal;
+      btn.disabled=false;
+      actualizarUI();
     }
   },1000);
 }
 
-function actualizarUI(){
-  if(porcentaje<0) porcentaje=0;
-  if(porcentaje>115) porcentaje=115;
-  let total=document.querySelectorAll('.basura').length;
-  if(!enRecarga.basura){
-    btnBasura.innerHTML=`🗑️<br>${total}`;
-    btnBasura.disabled=total===0;
-  }
-  progreso.style.width=Math.min(porcentaje,100)+'%';
-  pctTxt.textContent=porcentaje+'% LIMPIO';
-  if(porcentaje>=100) win.style.display='flex';
-}
-
 btnPlantar.addEventListener('click',()=>{
-  if(enRecarga.plantar) return;
   let f=document.createElement('div');
   f.className='flor'; f.textContent='🌸';
   f.style.left=(90+Math.random()*140)+'px';
   f.style.top=(50+Math.random()*130)+'px';
-  f.style.fontSize='20px';
   juego.appendChild(f);
-  cooldown(btnPlantar,'plantar','🌸<br>PLANTAR');
+  ponerEnRecarga(btnPlantar,"🌸 PLANTAR");
 });
 
 btnRegar.addEventListener('click',()=>{
-  if(enRecarga.regar) return;
-  for(let i=0;i<5;i++){
+  for(let i=0;i<4;i++){
     let g=document.createElement('div');
     g.className='gota'; g.textContent='💧';
     g.style.left=(80+Math.random()*160)+'px';
@@ -109,47 +159,43 @@ btnRegar.addEventListener('click',()=>{
     setTimeout(()=>g.remove(),800);
   }
   document.querySelectorAll('.flor').forEach(f=>{
-    let size=parseInt(f.style.fontSize)||20;
-    f.style.fontSize=(size+8)+'px';
-    if(f.textContent==='🌸') f.textContent='🌺';
+    let s=parseInt(f.style.fontSize)||20;
+    f.style.fontSize=(s+6)+'px';
   });
-  arbol.style.transform='translateX(-50%) scale(1.15)';
+  arbol.style.transform='translateX(-50%) scale(1.2)';
   setTimeout(()=>arbol.style.transform='translateX(-50%) scale(1)',300);
   porcentaje+=5;
   actualizarUI();
-  cooldown(btnRegar,'regar','💧<br>REGAR');
+  ponerEnRecarga(btnRegar,"💧 REGAR");
 });
 
 setInterval(()=>{
+  if(juegoTerminado) return;
   let b=document.createElement('div');
   b.className='basura';
   b.textContent=['🗑️','🧴','🥤','🍂'][Math.floor(Math.random()*4)];
   b.style.left=Math.random()*280+'px';
   juego.appendChild(b);
   setTimeout(()=>{
-    if(b.parentNode){
+    if(b.parentNode && !juegoTerminado){
       b.remove();
       porcentaje-=10;
-      let m=document.createElement('div');
-      m.id='menos'; m.textContent='-10%';
-      m.style.left='50%'; m.style.transform='translateX(-50%)';
-      juego.appendChild(m);
-      setTimeout(()=>m.remove(),1000);
       actualizarUI();
     }
   },5000);
   actualizarUI();
-},1800);
+},1600);
 
 btnBasura.addEventListener('click',()=>{
-  if(enRecarga.basura) return;
   let todas=document.querySelectorAll('.basura');
   if(todas.length===0) return;
-  todas.forEach(el=>{el.textContent='✨'; setTimeout(()=>el.remove(),150);});
-  porcentaje+=todas.length*15;
+  todas.forEach(el=>{el.textContent='✨'; setTimeout(()=>el.remove(),120);});
+  porcentaje+=25;
   actualizarUI();
-  cooldown(btnBasura,'basura',`🗑️<br>0`);
+  ponerEnRecarga(btnBasura,"🗑️ VACIO");
 });
+
+actualizarUI();
 </script>
 </body>
 </html>
