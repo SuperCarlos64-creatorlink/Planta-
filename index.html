@@ -13,22 +13,22 @@
   #pct{font-size:10px;margin:8px 0;display:block}
   #juego{position:relative;width:320px;height:380px;margin:15px auto;background:#a7e174;border:4px solid #000;box-shadow:6px 6px 0 #000;overflow:hidden}
   #arbol{font-size:110px;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:1;transition:0.5s}
-  .flor{position:absolute;font-size:20px;z-index:2;transition:0.5s}
-  .basura{position:absolute;font-size:22px;z-index:3;animation:caer 5s linear forwards}
+ .flor{position:absolute;font-size:20px;z-index:2;transition:0.5s}
+ .basura{position:absolute;font-size:22px;z-index:3;animation:caer 5s linear forwards}
   @keyframes caer{from{top:-30px}to{top:360px}}
   #botones{display:flex;justify-content:center;gap:8px;width:340px;margin:10px auto}
-  .btn{font-family:'Press Start 2P';font-size:7px;padding:12px 6px;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer;flex:1}
-  .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+ .btn{font-family:'Press Start 2P';font-size:7px;padding:12px 6px;border:3px solid #000;box-shadow:3px 3px 0 #000;cursor:pointer;flex:1;line-height:1.3}
+ .btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
   #btnPlantar{background:#ffbe0b}
   #btnRegar{background:#00b4d8;color:#fff}
   #btnBasura{background:#3a86ff;color:#fff}
-  #btnBasura:disabled{background:#888;color:#444;box-shadow:none;cursor:not-allowed}
+ .btn:disabled{background:#888!important;color:#444!important;box-shadow:none!important;cursor:not-allowed!important}
   #win{display:none;position:fixed;inset:0;background:#000;z-index:99;flex-direction:column;justify-content:center;align-items:center;color:#fff}
   #win h2{font-size:42px;color:#ffbe0b;text-shadow:6px 6px 0 #ff006e;line-height:1.2;animation:brilla 0.4s infinite alternate}
   @keyframes brilla{from{transform:scale(1)}to{transform:scale(1.2)}}
-  .gota{position:absolute;color:#00b4d8;font-size:18px;animation:lluvia 0.8s linear;z-index:10}
+ .gota{position:absolute;color:#00b4d8;font-size:18px;animation:lluvia 0.8s linear;z-index:10}
   @keyframes lluvia{from{top:0;opacity:1}to{top:300px;opacity:0}}
-  #menos{position:absolute;font-size:12px;color:red;animation:subir 1s forwards;z-index:20;font-weight:bold}
+  #menos{position:absolute;font-size:12px;color:red;animation:subir 1s forwards;z-index:20}
   @keyframes subir{from{top:300px;opacity:1}to{top:150px;opacity:0}}
 </style>
 </head>
@@ -36,21 +36,17 @@
 <h1>ARBOlITO PIXEL</h1>
 <div id="barra"><div id="progreso"></div></div>
 <span id="pct">0% LIMPIO</span>
-
 <div id="juego"><div id="arbol">🌳</div></div>
-
 <div id="botones">
-  <button class="btn" id="btnPlantar">🌸 PLANTAR</button>
-  <button class="btn" id="btnRegar">💧 REGAR</button>
-  <button class="btn" id="btnBasura" disabled>🗑️ 0</button>
+  <button class="btn" id="btnPlantar">🌸<br>PLANTAR</button>
+  <button class="btn" id="btnRegar">💧<br>REGAR</button>
+  <button class="btn" id="btnBasura" disabled>🗑️<br>0</button>
 </div>
-
 <div id="win">
   <h2>MUY<br>BIEN!</h2>
   <p style="font-size:10px;margin-top:20px">¡ARBOl AL 100%!</p>
   <button class="btn" style="margin-top:20px;background:#fff" onclick="location.reload()">REINICIAR</button>
 </div>
-
 <script>
 let juego=document.getElementById('juego');
 let arbol=document.getElementById('arbol');
@@ -61,28 +57,50 @@ let progreso=document.getElementById('progreso');
 let pctTxt=document.getElementById('pct');
 let win=document.getElementById('win');
 let porcentaje=0;
+let enRecarga = { plantar:false, regar:false, basura:false };
+
+function cooldown(btn, key, textoOriginal){
+  enRecarga[key]=true;
+  btn.disabled=true;
+  let tiempo=5;
+  let intervalo=setInterval(()=>{
+    btn.innerHTML=`⏳<br>${tiempo}s`;
+    tiempo--;
+    if(tiempo<0){
+      clearInterval(intervalo);
+      enRecarga[key]=false;
+      btn.innerHTML=textoOriginal;
+      actualizarUI(); // revisa si debe seguir deshabilitado por basura
+    }
+  },1000);
+}
 
 function actualizarUI(){
   if(porcentaje<0) porcentaje=0;
   if(porcentaje>115) porcentaje=115;
   let total=document.querySelectorAll('.basura').length;
-  btnBasura.textContent=`🗑️ ${total}`;
-  btnBasura.disabled=total===0;
+  if(!enRecarga.basura){
+    btnBasura.innerHTML=`🗑️<br>${total}`;
+    btnBasura.disabled=total===0;
+  }
   progreso.style.width=Math.min(porcentaje,100)+'%';
   pctTxt.textContent=porcentaje+'% LIMPIO';
   if(porcentaje>=100) win.style.display='flex';
 }
 
 btnPlantar.addEventListener('click',()=>{
+  if(enRecarga.plantar) return;
   let f=document.createElement('div');
   f.className='flor'; f.textContent='🌸';
   f.style.left=(90+Math.random()*140)+'px';
   f.style.top=(50+Math.random()*130)+'px';
   f.style.fontSize='20px';
   juego.appendChild(f);
+  cooldown(btnPlantar,'plantar','🌸<br>PLANTAR');
 });
 
 btnRegar.addEventListener('click',()=>{
+  if(enRecarga.regar) return;
   for(let i=0;i<5;i++){
     let g=document.createElement('div');
     g.className='gota'; g.textContent='💧';
@@ -99,6 +117,7 @@ btnRegar.addEventListener('click',()=>{
   setTimeout(()=>arbol.style.transform='translateX(-50%) scale(1)',300);
   porcentaje+=5;
   actualizarUI();
+  cooldown(btnRegar,'regar','💧<br>REGAR');
 });
 
 setInterval(()=>{
@@ -107,13 +126,10 @@ setInterval(()=>{
   b.textContent=['🗑️','🧴','🥤','🍂'][Math.floor(Math.random()*4)];
   b.style.left=Math.random()*280+'px';
   juego.appendChild(b);
-  
-  // SI SE ESCAPA LA BASURA, TE QUITA 10%
   setTimeout(()=>{
     if(b.parentNode){
       b.remove();
-      porcentaje -= 10;
-      // efecto visual -10%
+      porcentaje-=10;
       let m=document.createElement('div');
       m.id='menos'; m.textContent='-10%';
       m.style.left='50%'; m.style.transform='translateX(-50%)';
@@ -126,11 +142,13 @@ setInterval(()=>{
 },1800);
 
 btnBasura.addEventListener('click',()=>{
+  if(enRecarga.basura) return;
   let todas=document.querySelectorAll('.basura');
   if(todas.length===0) return;
   todas.forEach(el=>{el.textContent='✨'; setTimeout(()=>el.remove(),150);});
   porcentaje+=todas.length*15;
   actualizarUI();
+  cooldown(btnBasura,'basura',`🗑️<br>0`);
 });
 </script>
 </body>
